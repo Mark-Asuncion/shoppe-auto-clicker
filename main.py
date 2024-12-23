@@ -26,10 +26,10 @@ if __name__ == "__main__":
         nargs='?')
 
     parser.add_argument(
-        "--sleep",
-        help="Delay amount in seconds default 1 second",
+        "-s","--sleep",
+        help="Delay amount in seconds default 10 second",
         required=False,
-        default=1.0,
+        default=10,
         nargs='?')
 
     args = parser.parse_args(sys.argv[1:])
@@ -52,8 +52,6 @@ if __name__ == "__main__":
         "logs_dir": logs_folder,
         "sleep": int(args.sleep)
     }
-
-    print(opts)
 
     set_ctrl_c_handler()
     run_ev_loop(opts)
