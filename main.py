@@ -1,11 +1,8 @@
 import argparse
 from typing import List
-from autoclicker import run_ev_loop, set_ctrl_c_handler
+from autoclicker import run_ev_loop, VERSION, APP_NAME
 import sys
 import os
-
-VERSION="1.0.0"
-APP_NAME="AutoClicker"
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -53,5 +50,5 @@ if __name__ == "__main__":
         "sleep": int(args.sleep)
     }
 
-    set_ctrl_c_handler()
+    # set_ctrl_c_handler()
     run_ev_loop(opts)

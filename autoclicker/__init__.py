@@ -7,21 +7,34 @@ import time
 from pywinauto.application import Application
 from pywinauto.controls.uiawrapper import UIAWrapper
 import signal
+import os
 import sys
 import datetime
+
+VERSION="1.0.0"
+APP_NAME="AutoClicker"
 
 class MLogger:
     logs_dir = ""
     @staticmethod
     def print(v: str):
         d = datetime.datetime.now()
-        print(f"{d}:: {v}")
+        s = f"{d}:: {v}"
+        if len(MLogger.logs_dir) != 0:
+            today = d.strftime(r"%Y-%m-%d")
+            logs_f = os.path.join(
+                MLogger.logs_dir,
+                f"{today}.txt"
+            )
+            with open(logs_f, 'w') as f:
+                f.write(s)
+
+        print(s)
         sys.stdout.flush()
-    
-    def stderr(v: str):
-        d = datetime.datetime.now()
-        print(f"{d}:: {v}", file=sys.stderr)
-        sys.stdout.flush()
+    # def stderr(v: str):
+    #     d = datetime.datetime.now()
+    #     print(f"{d}:: {v}", file=sys.stderr)
+    #     sys.stdout.flush()
 
 class MProcessInfo:
     def __init__(self, pid: int, win32gui_hwnd: int):
@@ -45,9 +58,6 @@ class MProcessInfo:
         except:
             print(f"{self.__str__()} Error MProcessInfo.set_foreground")
 
-CLICK_SINGLE=1
-CLICK_DOUBLE=2
-
 class Shopee:
     window_name = "Shopee.*"
     app_name = ".*Shopee FlashSale.exe"
@@ -63,6 +73,8 @@ class Shopee:
         "Stop",
         "Start",
     ]
+    # Logs condition for dbl click
+    logs_condition = ".*because it is being used by another process."
     
     @staticmethod
     def find_child_windows(app: Application, windows: List[any]) -> bool:
@@ -71,10 +83,13 @@ class Shopee:
                 windows.append(window)
 
     @staticmethod
-    def _find_relevant_childs(windows: UIAWrapper, childs: List[UIAWrapper]):
+    def _find_relevant_childs(windows: UIAWrapper, childs: List[UIAWrapper], matches=[]):
+        if len(matches) == 0:
+            matches = Shopee.search_text
+
         for child in  windows.children():
             spl = child.window_text().splitlines()
-            for t in Shopee.search_text:
+            for t in matches:
                 if re.match(t, child.window_text()) != None:
                     # print(f"Appending {t} {child.window_text()[0:50]}")
                     childs.append(child)
@@ -90,30 +105,40 @@ class Shopee:
 
         checks = [
             ["success", "failed"],
-            ""
+            Shopee.logs_condition
         ]
         childs = []
         Shopee._find_relevant_childs(window, childs)
         for c in childs:
-            print(f"\tChild: {c.window_text()[0:30]}")
+            # print(f"\tChild: {c.window_text()[0:30]}")
             win_text = c.window_text()
 
             if win_text.lower() in checks[0]:
-                return CLICK_DOUBLE
+                MLogger.print(f"Found {win_text}")
+                return 2
 
             spl = win_text.splitlines()
             if len(spl) > 1 and re.match(logs_match, spl[0].strip()) != None:
                 t = spl[len(spl)-1]
-                # print(f"Last: {t} Len: {len(spl)}")
-                return 0
                 if re.match(checks[1], t) != None:
-                    return CLICK_DOUBLE
-            # print(f"{c.control_id()} {c.friendly_class_name()} {c.window_text()[0:30]}")
+                    MLogger.print(f"Found {t}")
+                    return 2
         return 0
     
     @staticmethod
-    def click(window: UIAWrapper, click_amnt: int):
-        pass
+    def click(window: UIAWrapper, click_amnt: int, delay=0.7):
+        childs = []
+        Shopee._find_relevant_childs(window, childs, Shopee.search_text[4:])
+        
+        if len(childs) == 0:
+            MLogger.print("Button not found cannot click")
+            return
+
+        MLogger.print(f"Found button with text {childs[0].window_text()}. Clicking the button {click_amnt} time/s")
+        while click_amnt > 0:
+            childs.click_input()
+            click_amnt-=1
+            time.sleep(delay)
 
 def find_window(name_rgx: str, exe_path: str, ret: List[MProcessInfo]):
     def callback(hwnd, _extra):
@@ -144,12 +169,12 @@ def find_window(name_rgx: str, exe_path: str, ret: List[MProcessInfo]):
 
     win32gui.EnumWindows(callback, None)
 
-def set_ctrl_c_handler():
-    def signal_handler(sig, frame):
-        print('You pressed Ctrl+C!')
-        # handler exit here
-        sys.exit(0)
-    signal.signal(signal.SIGINT, signal_handler)
+# def set_ctrl_c_handler():
+#     def signal_handler(sig, frame):
+#         print('You pressed Ctrl+C!')
+#         # handler exit here
+#         sys.exit(0)
+#     signal.signal(signal.SIGINT, signal_handler)
 
 def run_ev_loop(opts: dict):
     window: List[MProcessInfo] = []
@@ -157,11 +182,17 @@ def run_ev_loop(opts: dict):
     # loop through the windows with name_regex
     # do the process
     MLogger.logs_dir = opts["logs_dir"]
+
     MLogger.print(f"Logs located at {opts["logs_dir"]}")
     MLogger.print(f"Press Ctrl+C to stop the process")
+
+    find_window(Shopee.window_name, Shopee.app_name, window)
     while True:
         if len(window) == 0:
+            MLogger.print(f"Window with name {Shopee.window_name} or exe path {Shopee.app_name} not found")
             find_window(Shopee.window_name, Shopee.app_name, window)
+            sys.stdout.flush()
+            time.sleep(int(opts["sleep"]))
             continue
 
         app = window[0].app
@@ -170,12 +201,13 @@ def run_ev_loop(opts: dict):
 
         for window in windows:
             MLogger.print(f"Setting '{window.window_text()}' to foreground")
+            MLogger.print(f"Checking window '{window.window_text()}'")
             window.set_focus()
             click_amnt = Shopee.should_click(window)
-            MLogger.print(f"Done '{window.window_text()}'")
+            Shopee.click(window, click_amnt)
+            MLogger.print(f"Done on window '{window.window_text()}'")
 
 
         break
         sys.stdout.flush()
         time.sleep(int(opts["sleep"]))
-        pass
