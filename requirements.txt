@@ -1,5 +1,12 @@
+altgraph==0.17.4
 comtypes==1.4.8
+packaging==24.2
+pefile==2023.2.7
 psutil==6.1.0
+pyinstaller==6.11.1
+pyinstaller-hooks-contrib==2024.11
 pywin32==308
+pywin32-ctypes==0.2.3
 pywinauto==0.6.8
+setuptools==75.6.0
 six==1.17.0
