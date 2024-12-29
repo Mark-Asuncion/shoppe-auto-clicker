@@ -24,7 +24,7 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "-s","--sleep",
-        help="Delay amount in seconds default 10 second",
+        help="Delay amount in seconds default 10 seconds",
         required=False,
         default=10,
         nargs='?')

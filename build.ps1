@@ -1,0 +1,1 @@
+pyinstaller -F -n AutoClicker -p "${pwd}:${pwd}\autoclicker\" .\main.py
