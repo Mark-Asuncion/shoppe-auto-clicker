@@ -1,6 +1,6 @@
 import argparse
 from typing import List
-from autoclicker import run_ev_loop, VERSION, APP_NAME
+from autoclicker import run_ev_loop, VERSION, APP_NAME, set_ctrl_c_handler
 import sys
 import os
 
@@ -50,5 +50,5 @@ if __name__ == "__main__":
         "sleep": int(args.sleep)
     }
 
-    # set_ctrl_c_handler()
+    set_ctrl_c_handler()
     run_ev_loop(opts)
