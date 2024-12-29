@@ -215,6 +215,8 @@ def run_ev_loop(opts: dict):
             MLogger.print(f"Done checking window '{c_win.window_text()}'")
 
         for info in to_clicks:
+            if info[1] <= 0:
+                continue
             MLogger.print(f"Setting window '{info[0]}' to foreground")
             info[0].set_focus()
             MLogger.print(f"Starting click on window '{info[0]}'")
