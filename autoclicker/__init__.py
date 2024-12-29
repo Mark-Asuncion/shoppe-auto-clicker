@@ -43,7 +43,12 @@ class MProcessInfo:
     def __init__(self, pid: int, win32gui_hwnd: int):
         self.pid = pid
         self.hwnd = win32gui_hwnd
-        self.app: Application = Application(backend="uia").connect(process=self.pid, timeout=10)
+        try:
+            self.app: Application = Application(backend="uia").connect(process=self.pid, timeout=10)
+        except:
+            MLogger.print("Cannot connect to pid {self.pid} exiting with status 1")
+            sys.exit(1)
+
     
     def __str__(self):
         return f"MProcessInfo(pid={self.pid}, hwnd={hex(self.hwnd)})"
@@ -51,15 +56,15 @@ class MProcessInfo:
     def __repr__(self):
         return self.__str__()
 
-    def set_foreground(self):
-        try:
-            if self.app == None:
-                return
-            # if win32gui.GetWindowPlacement(self.hwnd) == win32con.SW_SHOWMINIMIZED:
-            #     self.app.top_window().maximize()
-            self.app.top_window().set_focus()
-        except:
-            print(f"{self.__str__()} Error MProcessInfo.set_foreground")
+    # def set_foreground(self):
+    #     try:
+    #         if self.app == None:
+    #             return
+    #         # if win32gui.GetWindowPlacement(self.hwnd) == win32con.SW_SHOWMINIMIZED:
+    #         #     self.app.top_window().maximize()
+    #         self.app.top_window().set_focus()
+    #     except:
+    #         print(f"{self.__str__()} Error MProcessInfo.set_foreground")
 
 class Shopee:
     window_name = "Shopee.*"
@@ -134,6 +139,7 @@ class Shopee:
             return
 
         childs = []
+        # NOTE: modify this line if Shopee.search_text is also modified
         Shopee._find_relevant_childs(window, childs, Shopee.search_text[4:])
         
         if len(childs) == 0:
@@ -171,7 +177,6 @@ def find_window(name_rgx: str, exe_path: str, ret: List[MProcessInfo]):
                     is_match = True
             
             if is_match:
-                win32gui.EnumDesktopWindows
                 ret.append(MProcessInfo(pid, hwnd))
         except:
             pass
@@ -195,8 +200,15 @@ def run_ev_loop(opts: dict):
     while True:
         if len(window) == 0:
             MLogger.print(f"Window with name {Shopee.window_name} or exe path {Shopee.app_name} not found")
+            window.clear()
             find_window(Shopee.window_name, Shopee.app_name, window)
-            sys.stdout.flush()
+            time.sleep(int(opts["sleep"]))
+            continue
+
+        if window[0].app == None or not window[0].app.is_process_running():
+            MLogger.print(f"Application is not running. Cannot automate retrying in {opts["sleep"]}s")
+            window.clear()
+            find_window(Shopee.window_name, Shopee.app_name, window)
             time.sleep(int(opts["sleep"]))
             continue
 
