@@ -72,8 +72,8 @@ class Shopee:
     search_text = [
         # Timer
         r"\d{2}:\d{2}:\d{2}\.\d",
-        "Success",
-        "Failed",
+        "SUCCESS",
+        "FAILED",
         # Logs
         r"^\[.*\].*$",
         
@@ -108,7 +108,7 @@ class Shopee:
                     break
 
     @staticmethod
-    def should_click(window: UIAWrapper) -> int:
+    def should_click(window: UIAWrapper) -> bool:
         logs_match = Shopee.search_text[3]
 
         checks = [
@@ -123,21 +123,18 @@ class Shopee:
 
             if win_text.lower() in checks[0]:
                 MLogger.print(f"Found {win_text}")
-                return 2
+                return True
 
             spl = win_text.splitlines()
             if len(spl) > 1 and re.match(logs_match, spl[0].strip()) != None:
                 t = spl[len(spl)-1]
                 if re.match(checks[1], t) != None:
                     MLogger.print(f"Found {t}")
-                    return 2
-        return 0
+                    return True
+        return False
     
     @staticmethod
-    def click(window: UIAWrapper, click_amnt: int, delay=0.5):
-        if click_amnt <= 0:
-            return
-
+    def click(window: UIAWrapper, delay=0.5):
         childs = []
         # NOTE: modify this line if Shopee.search_text is also modified
         Shopee._find_relevant_childs(window, childs, Shopee.search_text[4:])
@@ -145,6 +142,10 @@ class Shopee:
         if len(childs) == 0:
             MLogger.print(f"Button not found on window '{window.window_text()}'")
             return
+
+        click_amnt = 2
+        if childs[0].window_text() == Shopee.search_text[5]:
+            click_amnt = 1
 
         MLogger.print(f"Found button with text '{childs[0].window_text()}'. Clicking the button {click_amnt} time/s")
         while True:
@@ -222,16 +223,16 @@ def run_ev_loop(opts: dict):
             # to_clicks.append([c_win,2])
             # continue
             MLogger.print(f"Checking window '{c_win.window_text()}'")
-            click_amnt = Shopee.should_click(c_win)
-            to_clicks.append([c_win,click_amnt])
+            should_click = Shopee.should_click(c_win)
+            to_clicks.append([c_win,should_click])
             MLogger.print(f"Done checking window '{c_win.window_text()}'")
 
         for info in to_clicks:
-            if info[1] <= 0:
+            if info[1] == False:
                 continue
             MLogger.print(f"Setting window '{info[0].window_text()}' to foreground")
             info[0].set_focus()
             MLogger.print(f"Starting click on window '{info[0].window_text()}'")
-            Shopee.click(info[0], info[1])
+            Shopee.click(info[0])
 
         time.sleep(int(opts["sleep"]))
