@@ -229,9 +229,9 @@ def run_ev_loop(opts: dict):
         for info in to_clicks:
             if info[1] <= 0:
                 continue
-            MLogger.print(f"Setting window '{info[0]}' to foreground")
+            MLogger.print(f"Setting window '{info[0].window_text()}' to foreground")
             info[0].set_focus()
-            MLogger.print(f"Starting click on window '{info[0]}'")
+            MLogger.print(f"Starting click on window '{info[0].window_text()}'")
             Shopee.click(info[0], info[1])
 
         time.sleep(int(opts["sleep"]))
